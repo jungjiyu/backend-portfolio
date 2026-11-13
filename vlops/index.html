@@ -18,7 +18,7 @@
       <article class="card"><p class="eyebrow">대표 글 · 워크플로 재설계</p><h2><a href="articles/workflow-versions.html">모델 평가 워크플로 재설계: 레거시 분석과 Temporal 선택</a></h2><p>Kafka·Airflow 기반 레거시 분석부터 Argo와 Temporal의 선택까지. 요구 변화에 따른 설계 판단과 직접 구현한 DAG 실행 제어.</p></article>
       <article class="card"><p class="eyebrow">심화 · GPU 실행 복구</p><h2><a href="articles/runtime-recovery.html">GPU 작업 복구: 생성 응답 유실부터 재연결과 자원 회수까지</a></h2><p>생성 응답을 받지 못한 GPU 작업을 다시 찾는 방법과 워커 재시작 후 재연결, 종료 확인까지의 처리.</p></article>
       <article class="card"><p class="eyebrow">심화 · Agent의 후속 실행 통제</p><h2><a href="articles/agent-followup.html">평가 복구 Agent 설계: 설정 변경 검증과 중복 실행 방지</a></h2><p>수동 재시도와 Agent 제안의 경합을 CAS로 처리하고, 설정 변경 범위와 자동 복구 횟수를 제한한 구현.</p></article>
-      <article class="card"><p class="eyebrow">심화 · 로그 종료 구간 누락</p><h2><a href="articles/log-tail.html">재접속은 성공했는데 마지막 6줄은 왜 빠졌을까</a></h2><p>재접속 검증은 통과했지만 마지막 6줄이 빠졌다. 종료 후 전체 로그 비교로 원인을 찾고 drain을 적용한 과정.</p></article>
+      <article class="card"><p class="eyebrow">보조 글 · 로그 수집 디버깅</p><h2><a href="articles/log-tail.html">작업 종료 후 로그 누락: drain과 타임아웃 설계</a></h2><p>작업 종료와 로그 수집 완료를 동일하게 처리해 발생한 누락을 추적하고, 재접속 중에도 유지되는 drain·타임아웃을 구현한 과정.</p></article>
     </div>
   </main>
   <footer>VLOps · 모델 평가 워크플로의 설계·구현</footer>
