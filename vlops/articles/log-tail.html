@@ -19,6 +19,7 @@
 <section aria-labelledby="run80"><h2 id="run80">작업 종료를 로그 수집 완료로 처리한 문제</h2>
 <p>원인을 추적해 보니, 클라이언트가 상태 조회에서 작업 종료를 확인하는 즉시 로그 스트림도 닫고 있었다. <strong>원격 작업의 종료 시점과 클라이언트의 로그 수집 완료 시점을 동일하게 처리한 것이 원인이었다.</strong> 작업이 끝났더라도 스트림에는 아직 읽지 않은 출력이 남을 수 있었다.</p>
 <p>재접속 시 비교한 해시는 이전에 전달한 구간만 포함하므로, 종료 직전의 새 로그가 누락돼도 검증을 통과했다. 따라서 작업 상태와 별도로 로그 수집의 종료 조건을 정의해야 했다.</p>
+<figure class="architecture"><a class="figure-image" href="../assets/diagrams/log-tail.svg" aria-label="재접속 앞부분 검증과 종료 후 전체 비교가 확인한 범위 확대"><picture><source media="(max-width: 620px)" srcset="../assets/diagrams/log-tail-mobile.svg"><img src="../assets/diagrams/log-tail.svg" alt="재접속 앞부분 검증과 종료 후 전체 비교가 확인한 범위" loading="lazy"></picture></a><figcaption>재접속 검증은 앞 196개를 비교했고, 종료 후 전체 비교는 마지막 6줄의 누락을 찾아냈다. <a class="diagram-enlarge" href="../assets/diagrams/log-tail.svg">확대 보기 ↗</a></figcaption></figure>
 </section>
 
 <section aria-labelledby="drain"><h2 id="drain">drain 상태와 두 가지 타임아웃</h2>
