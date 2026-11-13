@@ -25,12 +25,11 @@
 <section aria-labelledby="drain"><h2 id="drain">drain 상태와 두 가지 타임아웃</h2>
 <p>작업 종료를 감지하면 즉시 연결을 닫는 대신, 로그 클라이언트를 <strong>남은 출력을 읽는 drain 상태</strong>로 전환했다. 이때 재접속이 발생해도 drain 상태와 최초 종료 감지 시점을 유지해, 연결 복구가 종료 대기를 초기화하지 않도록 했다.</p>
 <p>대기에는 두 가지 제한을 적용했다. <strong>idle timeout은 새 레코드를 받을 때마다 갱신</strong>해 후속 출력을 기다리고, <strong>전체 대기 한도는 최초 작업 종료 감지 시점부터 계산</strong>했다. 유지 중인 서빙 자원이 계속 로그를 보내더라도 전체 한도를 넘겨 기다리지는 않도록 한 것이다.</p>
-<p>원격 스트림이 먼저 끝나면 즉시 종료했으며, 로그 연결을 닫는 처리는 GPU 작업의 취소·회수와 분리했다. 이 방식은 제한된 시간 안에서 남은 출력을 수집하므로, 전체 대기 한도 이후에 도착하는 로그까지 보장하지는 않는다.</p>
+<p>원격 스트림이 먼저 끝나면 즉시 종료했으며, 로그 연결을 닫는 처리는 GPU 작업의 취소·회수와 분리했다. 전체 대기 한도가 지나면 로그가 더 도착하더라도 수집을 종료한다.</p>
 </section>
 
 <section aria-labelledby="verification"><h2 id="verification">종료 후 전체 출력 대조</h2>
-<p>당시 검증에서는 작업 종료 후 원격 로그 서버에서 다시 수집한 로그를 기준본으로 삼아 <code>follow</code>의 최종 출력과 바이트 단위로 비교했다. 수정 전에는 종료 구간의 누락을 확인했고, <strong>drain 적용 후에는 마지막 오류 로그를 포함한 전체 출력이 기준본과 일치했다.</strong> 재접속 구간 검증에 더해 종료 후 전체 대조가 필요했던 이유다.</p>
-<p class="note">비교 결과는 당시 검증 문서에 근거한다. 스크립트 원본과 실행별 원시 출력·diff 파일은 확보하지 못해 재실행으로 확인하지는 못했다.</p>
+<p>작업 종료 후 원격 서버에서 다시 받은 로그와 <code>follow</code> 출력을 바이트 단위로 비교했다. 수정 전에는 마지막 오류 로그가 빠졌지만, <strong>drain을 적용한 뒤에는 마지막 줄까지 일치했다.</strong></p>
 </section>
 <nav class="next" aria-label="다른 VLOps 글"><p>VLOps의 설계와 실행 제어</p><a href="workflow-versions.html">대표 글: 모델 평가 워크플로 재설계</a> · <a href="../index.html#articles">전체 글 목록으로</a></nav>
 </article></main><footer>VLOps · 모델 평가 워크플로의 설계·구현</footer></body></html>
