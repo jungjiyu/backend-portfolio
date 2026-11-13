@@ -7,7 +7,7 @@
 <header class="site-header"><a href="../index.html">VLOps · Backend Engineering</a><a href="../index.html#articles">글 목록</a></header>
 <main id="content"><article aria-labelledby="article-title"><p class="eyebrow">VLOPS · Agent 제안의 검증과 후속 실행 통제</p>
 <h1 id="article-title">평가 복구 Agent 설계: 설정 변경 검증과 중복 실행 방지</h1><p class="lead">평가가 실패하면 사용자는 같은 설정으로 재시도를 누를 수 있고, Agent는 동시성을 낮춰 다시 실행하자고 제안할 수 있었다. 둘 다 유효하지만 요청 ID도 내용도 달라 중복 요청 검사로는 걸러지지 않았고, 모두 실행하면 같은 실패 때문에 GPU 작업이 두 개 시작될 수 있었다. 그래서 실패한 실행 시도에 대해 수동 재시도와 Agent 중 하나만 후속 실행을 만들도록 구현했다.</p>
-<nav class="toc" aria-label="이 글의 목차"><strong>목차</strong><ol><li><a href="#race">서로 다른 요청이 같은 실패를 복구할 때</a></li><li><a href="#claim">CAS로 수동 재시도와 Agent의 경합 처리</a></li><li><a href="#investigation">Agent가 조사할 정보와 제안할 조치</a></li><li><a href="#validation">평가 대상은 고정하고 실행 설정만 변경</a></li><li><a href="#budget">평가가 새로 생성돼도 유지되는 복구 한도</a></li><li><a href="#verification">조사부터 후속 평가까지의 통합 검증</a></li></ol></nav>
+<nav class="toc" aria-label="이 글의 목차"><strong>목차</strong><ol><li><a href="#race">서로 다른 요청이 같은 실패를 복구할 때</a></li><li><a href="#claim">CAS로 수동 재시도와 Agent의 경합 처리</a></li><li><a href="#investigation">Agent가 조사할 정보와 제안할 조치</a></li><li><a href="#validation">평가 대상은 고정하고 실행 설정만 변경</a></li><li><a href="#budget">평가가 새로 생성돼도 유지되는 복구 한도</a></li></ol></nav>
 <section aria-labelledby="race"><h2 id="race">서로 다른 요청이 같은 실패를 복구할 때</h2>
 <p>NAVER Cloud에서 VLOps의 자동 복구 Agent를 구현할 때, 수동 재시도는 기존 평가에 새 실행 시도를 추가하고 Agent가 설정을 바꿔 제출하면 별도의 평가를 생성하도록 했다. 두 요청이 서로 다른 평가에 저장되므로, 기존 평가의 시도 번호에 유일성 제약을 두는 것만으로는 중복 실행을 막을 수 없었다.</p>
 <p>그래서 수동 재시도와 Agent의 새 평가 제출이 모두 같은 레코드를 선점하도록, <strong>원래 실패한 시도 레코드에 선점한 요청의 ID를 저장하기로 했다.</strong> 다만 Agent가 로그를 조사하는 동안 사용자가 먼저 재시도할 수도 있으므로, 선점 여부는 실제 제출 직전에 확인해야 했다.</p>
@@ -37,7 +37,7 @@ UPDATE failed_attempt
 <p>Agent는 자동 복구를 켠 평가가 실패했을 때 호출했으며, 서빙 실패로 평가를 시작하지 못한 경우도 조사 대상에 포함했다. 반면 사용자가 취소한 실행은 재시도하지 않았고, 평가가 성공한 뒤 자원 회수만 실패한 경우에도 평가를 다시 실행할 필요가 없으므로 Agent를 호출하지 않았다.</p>
 <p>모델에는 실패한 평가의 설정, 작업별 상태, 이전 복구 이력과 서빙·평가 로그를 전달하고, 추가 로그가 필요하면 해당 시도에 속한 작업에서 지정한 구간만 읽도록 했다. 이때 비밀값은 모델 입력에서 마스킹했으며, 조사 단계 수와 전달할 데이터 크기에도 제한을 뒀다.</p>
 <p>Agent가 retry, resume, 설정을 바꾼 새 평가 제출, no action 중 하나를 제안하면 검증기와 실행 서비스를 거쳐 실제로 적용할 수 있는지 확인했다. 예를 들어 평가가 아예 시작되지 않았다면 재개할 산출물이 없으므로, resume을 제안해도 일반 재시도로 처리했다.</p>
-<p>실환경에서는 Agent를 배포하고 실제 Qwen 엔드포인트의 JSON 응답을 확인했다. 조사부터 후속 평가 성공까지의 전체 흐름은 scripted model과 fake provider를 사용한 Temporal 통합 테스트로 검증했다.</p>
+<p>실환경에서는 Agent를 배포하고 실제 Qwen 엔드포인트의 JSON 응답을 확인했다.</p>
 
 </section>
 <section aria-labelledby="validation"><h2 id="validation">평가 대상은 고정하고 실행 설정만 변경</h2>
@@ -58,13 +58,6 @@ UPDATE failed_attempt
 <p>이를 막기 위해 Agent가 만든 평가에 부모 평가 ID, 최초 평가 ID, 해당 Agent 조치 ID를 함께 저장하고, 복구 횟수는 최초 평가를 기준으로 관리해 새 평가에도 같은 한도를 적용했다. 또한 조사 중에 다른 조치가 실행될 수 있으므로 제출 직전에 남은 횟수를 다시 확인했다.</p>
 <p>실행할 Agent 조치에는 최초 평가 ID를 기준으로 순번을 부여하고 두 값의 조합에 유일성 제약을 둬, 동시 요청이 같은 순번을 차지하면 다시 조회하도록 했다. 다음 순번이 한도를 넘으면 실행하지 않았으며, 이미 후속 실행을 선점했다면 선점을 해제했다.</p>
 <p>한도를 1회로 둔 테스트에서는 Agent가 설정을 바꾼 새 평가를 만든 뒤 그 평가도 실패시켜, 이미 한 번 복구한 상태에서 Agent가 다시 호출되지 않는지 확인했다. 별도로 제출 직전에 한도가 소진된 경우에도 Agent 조치를 건너뛰고 선점을 해제해, 사용자의 수동 재시도는 가능하도록 했는지 검사했다.</p>
-
-</section>
-<section aria-labelledby="verification"><h2 id="verification">조사부터 후속 평가까지의 통합 검증</h2>
-
-<p>Temporal 테스트 환경에서는 첫 평가를 실패시키고, scripted model이 평가 로그와 서빙 로그를 읽은 뒤 재시도를 제안하도록 구성했다. 모델의 응답을 미리 정해 두고, 조사 결과가 검증과 실행 서비스를 거쳐 다음 평가에 반영되는지 확인한 테스트였다.</p>
-<p>중간에는 JSON 형식이 아닌 응답과 존재하지 않는 도구 호출도 넣어, 조사 코드가 오류를 모델의 다음 입력에 포함하고 정해진 단계 수 안에서 다시 응답하도록 했다. 마지막 단계에는 도구 목록을 비우고 최종 제안을 받았으며, 실행 서비스가 조건을 확인하고 선점한 뒤 재시도를 제출했다.</p>
-<p>테스트에서 <strong>첫 시도는 실패하고 재시도는 성공했다.</strong> fake provider의 평가 시작 횟수는 두 시도를 합쳐 2회였으며, Agent를 중복 시작하려 해도 추가 실행은 생기지 않았다. 모델이 읽은 로그가 해당 시도의 서빙·평가 로그인지, 비밀값 원문이 모델 입력과 Temporal 이력에 남지 않았는지도 함께 검사했다.</p>
 
 </section>
 <nav class="next" aria-label="다른 VLOps 글"><p>VLOps의 설계와 실행 제어</p><a href="workflow-versions.html">대표 글: 모델 평가 워크플로 재설계</a> · <a href="../index.html#articles">전체 글 목록으로</a></nav>
